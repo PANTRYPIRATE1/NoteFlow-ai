@@ -399,22 +399,60 @@
     button.addEventListener("click", () => showPage(button.dataset.page));
   });
 
-  document.getElementById("chat-form").addEventListener("submit", event => {
-    event.preventDefault();
-    const input = document.getElementById("chat-input");
-    const message = input.value.trim();
-    if (!message) return;
+  const API_URL = "https://noteflow-api.ckoop2828.workers.dev/";
 
-    const log = document.getElementById("chat-log");
-    const bubble = document.createElement("div");
-    bubble.className = "message user";
-    const label = document.createElement("strong");
-    label.textContent = "You";
-    bubble.append(label, document.createTextNode(message));
-    log.appendChild(bubble);
-    input.value = "";
+document.getElementById("chat-form").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  const input = document.getElementById("chat-input");
+  const message = input.value.trim();
+  if (!message) return;
+
+  const log = document.getElementById("chat-log");
+  const sendButton = event.submitter;
+
+  const userBubble = document.createElement("div");
+  userBubble.className = "message user";
+
+  const userLabel = document.createElement("strong");
+  userLabel.textContent = "You";
+  userBubble.append(userLabel, document.createTextNode(message));
+  log.appendChild(userBubble);
+
+  input.value = "";
+  if (sendButton) sendButton.disabled = true;
+
+  const replyBubble = document.createElement("div");
+  replyBubble.className = "message";
+  replyBubble.textContent = "Connecting to NoteFlow...";
+  log.appendChild(replyBubble);
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ message })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Request failed.");
+    }
+
+    replyBubble.textContent = data.reply || "No reply received.";
+  } catch (error) {
+    replyBubble.textContent =
+      "Connection failed. Check your Worker URL and deployment.";
+    console.error("NoteFlow connection error:", error);
+  } finally {
+    if (sendButton) sendButton.disabled = false;
     log.scrollTop = log.scrollHeight;
-  });
+  }
+});
+
 
   function getNotes() {
     try {
